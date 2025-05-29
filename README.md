@@ -1,2 +1,2 @@
-# course_project_priv
-CoursePorject private
+# courseproject
+Project we get

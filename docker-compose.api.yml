@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Make sure to create a Dockerfile
+    ports:
+      - "5002:5002"  # Map 5001 to the app's HTTP port  # Expose app on port 5000
+    volumes:
+      - /etc/ssl/certs:/etc/ssl/certs
+      - /etc/ssl/private:/etc/ssl/private
+      - .:/app  # Mount the project directory
+    environment:
+      - FLASK_ENV=development  # Set the environment (adjust as needed)
+      # - DATABASE_URL=postgresql://user:password@db:5432/mydatabase  # Adjust for your DB
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    networks:
+      - es-network
+    restart: always
+
+networks:
+  es-network:
+    driver: bridge
+
+#networks:
+  #es-network:
+    #name: es-network
+    #external: true

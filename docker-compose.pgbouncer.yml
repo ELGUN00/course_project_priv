@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    restart: always
+    environment:
+      DB_HOST: postgres  # PgBouncer connects to PostgreSQL container
+      DB_PORT: 5432
+      DB_NAME: test
+      DB_USER: postgres
+      DB_PASSWORD: 12
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 100
+      DEFAULT_POOL_SIZE: 20
+    ports:
+      - "6432:6432"
+    volumes:
+      - ./pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./userlist.txt:/etc/pgbouncer/userlist.txt
+    networks:
+      - mynetwork
+      - es-network
+
+networks:
+  mynetwork:
+    driver: bridge
+  es-network:
+    name: es-network
+    external: true

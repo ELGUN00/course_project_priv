@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: elasticsearch_course
+    hostname: elasticsearch 
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=es-docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # Set JVM heap size
+      - xpack.security.enabled=false    # Disable security for simplicity
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"   # Expose Elasticsearch API port
+      - "9300:9300"   # Transport port
+    networks:
+      - es-network
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    restart: always
+    mem_limit: 4g
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.2
+    container_name: kibana_course
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"   # Expose Kibana UI port
+    depends_on:
+      - elasticsearch
+    networks:
+      - es-network
+
+volumes:
+  es-data:           # Persistent data volume for Elasticsearch
+
+networks:
+  es-network:
+    name: es-network
+    external: true        # Define 
