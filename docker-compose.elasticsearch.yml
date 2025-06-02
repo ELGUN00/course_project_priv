@@ -37,12 +37,15 @@ services:
     depends_on:
       - elasticsearch
     networks:
+      - mynetwork
       - es-network
 
 volumes:
   es-data:           # Persistent data volume for Elasticsearch
 
 networks:
+  mynetwork:
+    driver: bridge
   es-network:
     name: es-network
-    external: true        # Define 
+    external: true           # Define 

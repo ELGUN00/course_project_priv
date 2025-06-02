@@ -16,14 +16,13 @@ services:
       # - DATABASE_URL=postgresql://user:password@db:5432/mydatabase  # Adjust for your DB
       - ELASTICSEARCH_URL=http://elasticsearch:9200
     networks:
+      - mynetwork
       - es-network
     restart: always
 
 networks:
-  es-network:
+  mynetwork:
     driver: bridge
-
-#networks:
-  #es-network:
-    #name: es-network
-    #external: true
+  es-network:
+    name: es-network
+    external: true
