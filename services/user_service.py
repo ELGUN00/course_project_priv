@@ -1,6 +1,7 @@
-from models.user import User
+from models.user import User, Role
 from extensions import db, es
-import base64 
+import base64
+from sqlalchemy import desc
 
 class UserService:
     @staticmethod
@@ -13,7 +14,7 @@ class UserService:
     @staticmethod
     def get_profile(user_id):
         user = UserService.get_user_by_id(user_id)
-        return user.to_dict()
+        return user.to_dict_profile()
 
     @staticmethod
     def update_user(user_id, update_data):
@@ -82,3 +83,39 @@ class UserService:
         user.profile_picture = None
         db.session.commit()
         return {"msg": "Profile picture deleted successfully."}
+    
+    @staticmethod
+    def get_top_users(role=None, location=None, degree=None, min_rating=0, page=1, per_page=10):
+        query = User.query
+
+        # Filter by role
+        if role:
+            role = role.upper()
+            if role not in ['TUTOR', 'ACADEMY']:
+                raise ValueError("Role must be 'TUTOR' or 'ACADEMY'")
+            query = query.filter(User.role == Role[role])
+
+        # Optional filters
+        if location:
+            query = query.filter(User.location.ilike(f"%{location}%"))
+        if degree:
+            query = query.filter(User.degree.ilike(f"%{degree}%"))
+        if min_rating:
+            query = query.filter(User.rating >= min_rating)
+
+        # Sort by rating
+        query = query.order_by(desc(User.rating))
+
+        # Paginate
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        # Serialize
+        users = [user.course_to_dict() for user in paginated.items]
+
+        return {
+            "users": users,
+            "total": paginated.total,
+            "page": paginated.page,
+            "pages": paginated.pages,
+            "per_page": paginated.per_page,
+        }

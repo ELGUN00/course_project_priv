@@ -4,7 +4,8 @@ from services.otp_service import OTPService
 from utils.validators import validate_registration
 from werkzeug.exceptions import BadRequest
 from datetime import datetime, timedelta
-from flask_jwt_extended import jwt_required,  get_jwt_identity, create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
+from _logger import CatchErrors, log
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -28,7 +29,6 @@ def register():
         }
         return jsonify(response), 400
     except Exception as error:
-        print(error)
         response = {
         "msg": "Internal problem"
         }
@@ -50,9 +50,8 @@ def send_otp():
         }
         return jsonify(response), 400
     except Exception as error:
-        print(error)
         response = {
-        "msg": "Internal problem"
+        "msg": f"Internal problem: {error}"
         }
         return jsonify(response), 500 
 
@@ -71,10 +70,10 @@ def verify_otp():
             raise BadRequest("Invalid OTP.")
         
         if auth_service.user_exists(phone):
-            response = auth_service.login_user(phone)
+            response = auth_service.login_user(str(phone))
             return jsonify(response), 200
         else:
-            token = create_access_token(identity=phone, expires_delta=timedelta(minutes=10))
+            token = create_access_token(identity=str(phone), expires_delta=timedelta(minutes=10))
             return jsonify({"redirect": "/register","token": 'Bearer ' + token}), 200
     except  BadRequest as error:
         response = {

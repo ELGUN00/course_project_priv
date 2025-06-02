@@ -58,7 +58,6 @@ class User(db.Model):
             "name": self.name,
             "surname": self.surname,
             "role": self.role.value,
-            "phone": self.phone,
             "profile_picture": base64.b64encode(self.profile_picture).decode('utf-8') if self.profile_picture else None,
             "rating": self.rating,
             "bio": self.bio,
@@ -73,10 +72,21 @@ class User(db.Model):
             "surname": self.surname,
             "role": self.role.value,
             "rating":self.rating,
-            "phone": self.phone,
             "profile_picture": base64.b64encode(self.profile_picture).decode('utf-8') if self.profile_picture else None,
         }
-    
+    def to_dict_profile(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "surname": self.surname,
+            "role": self.role.value,
+            "profile_picture": base64.b64encode(self.profile_picture).decode('utf-8') if self.profile_picture else None,
+            "rating": self.rating,
+            "bio": self.bio,
+            "phone": self.phone,
+            "degree": self.degree,
+            "location": self.location,
+        }
 class Course(db.Model):
     __tablename__ = 'course'
     

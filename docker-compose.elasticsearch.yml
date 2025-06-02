@@ -25,6 +25,7 @@ services:
       - es-data:/usr/share/elasticsearch/data
     restart: always
     mem_limit: 4g
+    
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.10.2

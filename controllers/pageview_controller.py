@@ -6,17 +6,17 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 page_view_bp = Blueprint('page_view', __name__)
 
 
-@page_view_bp.route('', methods=['POST'])
-@jwt_required()
-def add_page_view():
-    data = request.json
-    viewed_user_id = data.get('viewed_user_id')
-    viewer_user_id = get_jwt_identity()
+# @page_view_bp.route('', methods=['POST'])
+# @jwt_required()
+# def add_page_view():
+#     data = request.json
+#     viewed_user_id = data.get('viewed_user_id')
+#     viewer_user_id = get_jwt_identity()
 
-    if not viewed_user_id or not viewer_user_id:
-        return jsonify({'msg': 'Both viewed_user_id and viewer_user_id are required'}), 400
+#     if not viewed_user_id or not viewer_user_id:
+#         return jsonify({'msg': 'Both viewed_user_id and viewer_user_id are required'}), 400
 
-    return PageViewService.add_page_view(viewed_user_id, viewer_user_id)
+#     return PageViewService.add_page_view(viewed_user_id, viewer_user_id)
 
 
 @page_view_bp.route('/count', methods=['GET'])

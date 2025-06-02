@@ -12,6 +12,7 @@ from extensions import db, jwt, es
 from flask_talisman import Talisman
 # Initialize Flask app and configuration
 app = Flask(__name__)
+app.debug = True
 talisman = Talisman(app)
 CORS(app)
 
@@ -39,18 +40,21 @@ jwt.init_app(app)
 # auth_service = AuthenticationService(db.session)
 # profile_service = ProfileService(db.session)
 
+from _logger import log
 
 if __name__ == '__main__':
     # Initialize database and create tables
     # Ensure app context is available
-    es.indices.create(index="users", ignore=400)
-    es.indices.create(index="courses", ignore=400)
-    print('Hello world!')
+    
+
+    es.options(ignore_status=[400]).indices.create(index="users")
+    es.options(ignore_status=[400]).indices.create(index="courses")
+    log('Hello world!')
     with app.app_context():
         db.create_all()  # Create all tables
     app.run(
         host="0.0.0.0",           # Listen on all interfaces
         port=5002,                # HTTPS default port
-        ssl_context=("./apache2.crt", "./apache2.key")  # Paths to cert and key
     )
+    # ssl_context=("./apache2.crt", "./apache2.key")
     #app.run(host="0.0.0.0", port=5000,debug=True)

@@ -7,7 +7,7 @@ import jwt
 from werkzeug.exceptions import BadRequest
 from datetime import datetime, timedelta
 import base64
-
+from _logger import log
 class AuthService:
     def __init__(self, db_session=db.session):
         self.db = db_session
@@ -34,17 +34,15 @@ class AuthService:
         
         self.db.add(user)
         self.db.commit()
-        
         #Save to elasticsearch
-        es.index(index="users", id=user.id, document={
+        resp = es.index(index="users", id=user.id, document={
             "user_id": user.id,
             "name": user.name,
             "surname": user.surname
         })
-        
         additional_claims = {"role": user.role.value}
         token = create_access_token(identity=str(user.id), additional_claims=additional_claims,expires_delta = timedelta(days=180))
-        res = {"access_token":'Bearer ' + token, "user": user.to_dict()}
+        res = {"access_token":'Bearer ' + token, "user": user.to_dict_profile()}
         return res
 
     def user_exists(self,phone):
@@ -54,8 +52,9 @@ class AuthService:
     def login_user(self, phone):
         user = User.query.filter((User.phone == phone)).first()
         additional_claims = {"role": user.role.value}
-        token = create_access_token(identity=(user.id), additional_claims=additional_claims,expires_delta = timedelta(days=180))
-        return {"access_token": 'Bearer ' + token, "user": user.to_dict()}
+        token = create_access_token(identity=str(user.id), additional_claims=additional_claims,expires_delta = timedelta(days=180))
+        res = {"access_token":'Bearer ' + token, "user": user.to_dict_profile()}
+        return res
     
     # def login(self, data):
     #     phone = data.get("phone")

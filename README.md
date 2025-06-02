@@ -1,2 +1,2 @@
-# courseproject
+# courseproject PRIVATE
 Project we get

@@ -14,4 +14,5 @@ EXPOSE 5002
 
 # Command to run the app
 CMD ["python", "app.py", "--host=0.0.0.0", "--port=5002"]
-#CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--certfile=/etc/ssl/certs/apache2.crt", "--keyfile=/etc/ssl/private/apache2.key", "app:app"]
+# CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+# CMD ["flask", "run", "--host=0.0.0.0", "--port=5002", "--debug"]

@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest,HTTPException
 from services.course_service import CourseService
-
+from _logger import log
 course_bp = Blueprint('course', __name__)
 
 @course_bp.route('/courses/<int:user_id>', methods=['GET'])
@@ -125,27 +125,26 @@ def get_comments_by_course(course_id):
 @jwt_required()
 def add_course():
     try: # Get user info from JWT
-        print("Girdi")
+        log("Girdi")
         user_id = get_jwt_identity()
         role = get_jwt().get('role')  # Assuming `request.user_role` is set somewhere based on JWT claim
-        print(user_id)
+        log(user_id)
         # Create an instance of CourseService
         course_service = CourseService(user_id, role)
         
         # Get data from the request
         data = request.get_json()
-        print(data)
+        log(data)
         # Add the course using the service
         course = course_service.create_course(data)
-        print(course.to_dict())
+        log(course.to_dict())
         # Return the course info
         return jsonify(course.to_dict()), 201
         
     except BadRequest as error:
         return jsonify({f"msg {data}": str(error)}), 400
     except Exception as error:
-        print(error)
-        return jsonify({"msg": "Internal error"}), 500
+        return jsonify({"msg": f"{error}"}), 500
 
 
 @course_bp.route('/modify/<int:course_id>', methods=['PUT'])
@@ -173,3 +172,50 @@ def modify_course(course_id):
     except Exception as error:
         print(error)
         return jsonify({"msg": "Internal error"}), 500
+    
+    
+@course_bp.route('/<int:course_id>', methods=['GET'])
+@jwt_required()
+def get_the_course_by_id(course_id):
+    try:
+        log(course_id)
+        course = CourseService.get_course(course_id=course_id)
+        # Return the course info
+        return jsonify(course), 200
+    except HTTPException as http_error:
+        # This captures `abort(404)` and similar HTTP aborts
+        return jsonify({"msg": http_error.description}), http_error.code
+    except BadRequest as error:
+        return jsonify({"msg": str(error)}), 400
+    except Exception as error:
+        return jsonify({"msg": f"{error}"}), 500
+    
+    
+@course_bp.route('/top-courses', methods=['GET'])
+@jwt_required()
+def get_top_courses_route():
+    try:
+        city = request.args.get('city')
+        district = request.args.get('district')
+        min_rating = float(request.args.get('min_rating', 0))
+        online_str = request.args.get('online')
+        online = None
+        if online_str is not None:
+            online = online_str.lower() in ['true', '1', 'yes']
+
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+
+        result = CourseService.get_top_courses(
+            city=city,
+            district=district,
+            min_rating=min_rating,
+            online=online,
+            page=page,
+            per_page=per_page
+        )
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"msg": f"Unexpected error: {str(e)}"}), 500

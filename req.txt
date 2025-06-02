@@ -4,7 +4,7 @@ Werkzeug
 requests
 flask-jwt-extended
 Flask-SQLAlchemy
-elasticsearch
+elasticsearch==8.7.0
 psycopg2-binary
 flask-talisman
 flask-cors

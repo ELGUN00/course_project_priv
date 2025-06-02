@@ -6,6 +6,8 @@ from datetime import datetime
 from sqlalchemy.orm import scoped_session
 from flask import abort
 import base64
+from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
 
 class CourseService:
     
@@ -227,3 +229,48 @@ class CourseService:
             # In case of any error, rollback the transaction
             db.session.rollback()
             raise BadRequest(f"An error occurred: {str(e)}")
+        
+    @staticmethod
+    def get_course_by_id(course_id):
+        user = Course.query.get(course_id)
+        if not user:
+            return abort(404, description="Course with this id not found")
+        return user
+    
+    @staticmethod
+    def get_course(course_id):
+        course = CourseService.get_course_by_id(course_id)
+        return course.to_dict()
+    
+    @staticmethod
+    def get_top_courses(city=None, district=None, min_rating=0, online=None, page=1, per_page=10):
+        query = Course.query.options(
+            joinedload(Course.tutor), joinedload(Course.academy)
+        )
+
+        # Filters
+        if city:
+            query = query.filter(Course.city.ilike(f"%{city}%"))
+        if district:
+            query = query.filter(Course.district.ilike(f"%{district}%"))
+        if online is not None:
+            query = query.filter(Course.online == online)
+        if min_rating:
+            query = query.filter(Course.rating >= min_rating)
+
+        # Sort by rating
+        query = query.order_by(desc(Course.rating))
+
+        # Paginate
+        paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        # Serialize
+        courses = [course.to_dict(user_flag=True) for course in paginated.items]
+
+        return {
+            "courses": courses,
+            "total": paginated.total,
+            "page": paginated.page,
+            "pages": paginated.pages,
+            "per_page": paginated.per_page,
+        }

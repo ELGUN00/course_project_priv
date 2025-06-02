@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from services.user_service import UserService
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from werkzeug.exceptions import BadRequest
 import base64 
+from services.pageview_service import PageViewService
 user_bp = Blueprint("user", __name__)
 
 @user_bp.route('/', methods=['GET'])
@@ -46,3 +48,47 @@ def delete_profile_picture():
         return jsonify(response), 200
     except ValueError as e:
         return jsonify({"msg": str(e)}), 404
+
+from _logger import log
+
+@user_bp.route('/<int:viewed_user_id>', methods=['GET'])
+@jwt_required()
+def get_the_user_by_id(viewed_user_id):
+    try:
+        #viewed_user_id, viewer_user_id
+        viewer_user_id = get_jwt_identity()
+        user = UserService.get_profile(user_id=viewed_user_id)
+        PageViewService.add_page_view(viewed_user_id, viewer_user_id)
+        # Return the course info
+        return jsonify(user), 200
+    except BadRequest as error:
+        return jsonify({"msg": str(error)}), 400
+    except Exception as error:
+        return jsonify({"msg": "Internal error"}), 500
+    
+@user_bp.route('/top-users', methods=['GET'])
+@jwt_required()
+def get_top_users_route():
+    try:
+        role = request.args.get('role')
+        location = request.args.get('location')
+        degree = request.args.get('degree')
+        min_rating = float(request.args.get('min_rating', 0))
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+
+        result = UserService.get_top_users(
+            role=role,
+            location=location,
+            degree=degree,
+            min_rating=min_rating,
+            page=page,
+            per_page=per_page
+        )
+
+        return jsonify(result), 200
+
+    except ValueError as ve:
+        return jsonify({"msg": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"msg": f"Unexpected error: {str(e)}"}), 500
