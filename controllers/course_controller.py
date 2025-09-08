@@ -219,7 +219,7 @@ def get_top_courses_route():
             page=page,
             per_page=per_page
         )
-
+        log(result)
         return jsonify(result), 200
 
     except Exception as e:
