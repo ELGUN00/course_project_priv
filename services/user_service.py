@@ -33,7 +33,7 @@ class UserService:
         :return: Updated user as a dictionary
         """
         # Restricted fields that cannot be updated
-        restricted_fields = {"phone", "rating", "role"}
+        restricted_fields = {"phone", "rating", "role","profile_picture"}
     
         # Fetch the user from the database
         user = UserService.get_user_by_id(user_id)
