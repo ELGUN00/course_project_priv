@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.comment_service import CommentService
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import HTTPException
 
 comment_bp = Blueprint('comment', __name__)
 
@@ -25,7 +26,9 @@ def add_comment():
         # Delegate to service
         comment = CommentService.add_comment(course_id, user_id, content, rating)
         return jsonify(comment.to_dict()), 201
-    
+    except HTTPException as e:
+        # Capture abort() calls and return JSON
+        return jsonify({"msg": e.description}), e.code
     except SQLAlchemyError as e:
         return jsonify({"msg": f"Database msg: {str(e)}"}), 500
     except Exception as e:
@@ -46,7 +49,9 @@ def modify_comment(comment_id):
         # Delegate to service
         comment = CommentService.modify_comment(comment_id, user_id, content, rating)
         return jsonify(comment.to_dict()), 200
-
+    except HTTPException as e:
+        # Capture abort() calls and return JSON
+        return jsonify({"msg": e.description}), e.code
     except SQLAlchemyError as e:
         return jsonify({"msg": f"Database msg: {str(e)}"}), 500
     except Exception as e:
@@ -63,7 +68,10 @@ def delete_comment(comment_id):
         # Delegate to service
         CommentService.delete_comment(comment_id, user_id)
         return jsonify({"message": "Comment deleted successfully."}), 200
-
+    
+    except HTTPException as e:
+        # Capture abort() calls and return JSON
+        return jsonify({"msg": e.description}), e.code
     except SQLAlchemyError as e:
         return jsonify({"msg": f"Database msg: {str(e)}"}), 500
     except Exception as e:

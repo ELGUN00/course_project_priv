@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from flask import current_app
 import uuid
 import os
+from _logger import log
 
 class CourseService:
     
@@ -94,9 +95,9 @@ class CourseService:
             raise BadRequest("Course not found.")
         
         # Ensure the user is allowed to modify this course
-        if (self.role == "tutor" and course.tutor_id != self.user_id) or (self.role == "academy" and course.academy_id != self.user_id):
+        if (self.role == "tutor" and int(course.tutor_id) != int(self.user_id)) \
+        or (self.role == "academy" and int(course.academy_id) != int(self.user_id)):
             raise BadRequest("You are not authorized to modify this course.")
-
         # Update course fields if provided in the data
         course_updated = False  # Flag to check if the course is modified
 
@@ -223,14 +224,14 @@ class CourseService:
                 raise BadRequest("Course not found.")
             
             # Step 2: Check if the user is authorized to delete the course
-            if self.role == 'tutor' and course.tutor_id == self.user_id:
+            if self.role == 'tutor' and int(course.tutor_id) == int(self.user_id):
                 # Delete all comments related to the course
                 db.session.query(Comment).filter(Comment.course_id == course.id).delete(synchronize_session=False)
     
                 # Step 3: Delete the course
                 db.session.delete(course)
     
-            elif self.role == 'academy' and course.academy_id == self.user_id:
+            elif self.role == 'academy' and int(course.academy_id) == int(self.user_id):
                 db.session.query(Comment).filter(Comment.course_id == course.id).delete(synchronize_session=False)
     
                 # Step 3: Delete the course

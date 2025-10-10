@@ -142,7 +142,7 @@ def add_course():
         log(data)
         # Add the course using the service
         course = course_service.create_course(data)
-        log(course.to_dict())
+        # log(course.to_dict())
         # Return the course info
         return jsonify(course.to_dict()), 201
         
@@ -156,9 +156,13 @@ def add_course():
 @jwt_required()
 def modify_course(course_id):
     try:
+        log('BURDA')
         # Get user info from JWT
         user_id = get_jwt_identity()
+        log(user_id)
         role = get_jwt().get('role')   # Assuming `request.user_role` is set somewhere based on JWT claim
+        
+        log(role)
         
         # Create an instance of CourseService
         course_service = CourseService(user_id, role)

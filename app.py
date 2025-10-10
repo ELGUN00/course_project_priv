@@ -10,6 +10,8 @@ from controllers.favorites_contoller import favorites_bp
 from controllers.search_controller import search_bp
 from extensions import db, jwt, es
 from flask_talisman import Talisman
+from flask_migrate import Migrate
+
 # Initialize Flask app and configuration
 app = Flask(__name__)
 app.debug = True
@@ -36,6 +38,9 @@ app.config.from_object(Config)
 
 db.init_app(app)
 jwt.init_app(app)
+
+# NEW: Initialize Migrate
+migrate = Migrate(app, db)
 
 # auth_service = AuthenticationService(db.session)
 # profile_service = ProfileService(db.session)

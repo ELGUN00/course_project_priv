@@ -44,6 +44,18 @@ class CommentService:
         except SQLAlchemyError as e:
             db.session.rollback()
             abort(500, description=f"Failed to add comment: {str(e)}")
+            # Update course rating
+            CommentService.update_course_rating(course_id)
+
+            # After updating the course rating, also update the tutor's rating
+            if course.tutor:
+                CommentService.update_user_rating(course.tutor.id)
+            if course.academy:
+                CommentService.update_user_rating(course.academy.id)
+            return new_comment
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            abort(500, description=f"Failed to add comment: {str(e)}")
     
     @staticmethod
     def modify_comment(comment_id, user_id, content=None, rating=None):

@@ -38,7 +38,18 @@ class User(db.Model):
     views_received = db.relationship('PageView', foreign_keys='PageView.viewed_user_id', back_populates='viewed_user', lazy='dynamic')
     views_made = db.relationship('PageView', foreign_keys='PageView.viewer_user_id', back_populates='viewer_user', lazy='dynamic')
     
-    favorites = db.relationship('Favorites', back_populates='user', lazy='dynamic')
+    favorites = db.relationship(
+        'Favorites',
+        back_populates='user',
+        lazy='dynamic',
+        foreign_keys='Favorites.user_id'   # 🔑 explicitly specify which foreign key to use
+    )
+
+    favorited_by = db.relationship(
+        'Favorites',
+        lazy='dynamic',
+        foreign_keys='Favorites.target_user_id'  # 🔑 explicitly specify target_user_id
+    )
     
     def __init__(self, name, surname, role=Role.STUDENT, phone=None, profile_picture=None, 
                  bio=None, degree=None, location=None, rating=0):
@@ -52,6 +63,55 @@ class User(db.Model):
         self.location = location
         self.rating = rating
     
+    
+    def get_course_rating_stats(self):
+        """
+        Aggregate rating stats from all courses for this user
+        as a tutor or academy.
+        Returns:
+        {
+            "average_rating": float,
+            "count": int,
+            "ratings": { "5": int, "4": int, "3": int, "2": int, "1": int }
+        }
+        """
+        # Collect all course IDs for this user
+        course_ids = [c.id for c in self.courses_as_tutor.all()] + [c.id for c in self.courses_as_academy.all()]
+        if not course_ids:
+            return {
+                "average_rating": 0.0,
+                "count": 0,
+                "ratings": {str(i): 0 for i in range(1, 6)}
+            }
+
+        # Aggregate ratings from comments
+        rating_query = (
+            db.session.query(
+                Comment.rating,
+                func.count(Comment.rating).label("count")
+            )
+            .filter(Comment.course_id.in_(course_ids))
+            .group_by(Comment.rating)
+            .all()
+        )
+
+        rating_counts = {str(i): 0 for i in range(1, 6)}
+        total_count = 0
+        total_sum = 0
+
+        for r, c in rating_query:
+            rating_counts[str(int(r))] = c
+            total_count += c
+            total_sum += r * c
+
+        average_rating = round(total_sum / total_count, 2) if total_count > 0 else 0.0
+
+        return {
+            "average_rating": average_rating,
+            "count": total_count,
+            "ratings": rating_counts
+        }
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -74,8 +134,8 @@ class User(db.Model):
             "rating":self.rating,
             "profile_picture": self.profile_picture if self.profile_picture else None,
         }
-    def to_dict_profile(self):
-        return {
+    def to_dict_profile(self, include_course_ratings=True):
+        data = {
             "id": self.id,
             "name": self.name,
             "surname": self.surname,
@@ -87,6 +147,11 @@ class User(db.Model):
             "degree": self.degree,
             "location": self.location,
         }
+
+        if include_course_ratings:
+            data["course_rating_stats"] = self.get_course_rating_stats()
+
+        return data
 class Course(db.Model):
     __tablename__ = 'course'
     
@@ -112,12 +177,56 @@ class Course(db.Model):
 
     favorites = db.relationship('Favorites', back_populates='course', lazy='dynamic')
     
-    def to_dict(self,user_flag=True):
+    
+    def get_rating_stats_from_comments(self):
+        """
+        Returns ratings stats based on the Comment table:
+        {
+            "average_rating": float,
+            "count": int,
+            "ratings": {
+                "5": int,
+                "4": int,
+                "3": int,
+                "2": int,
+                "1": int
+            }
+        }
+        """
+        # Aggregate ratings from comments
+        rating_query = (
+            db.session.query(
+                Comment.rating,
+                func.count(Comment.rating).label("count")
+            )
+            .filter(Comment.course_id == self.id)
+            .group_by(Comment.rating)
+            .all()
+        )
+
+        # Initialize counts
+        rating_counts = {str(i): 0 for i in range(1, 6)}
+        total_count = 0
+        total_sum = 0
+
+        for r, c in rating_query:
+            rating_counts[str(int(r))] = c
+            total_count += c
+            total_sum += r * c
+
+        average_rating = round(total_sum / total_count, 2) if total_count > 0 else 0.0
+
+        return {
+            "average_rating": average_rating,
+            "count": total_count,
+            "ratings": rating_counts
+        }
+    def to_dict(self, user_flag=True, include_rating_stats=True):
         course_dict = {
-            "id":self.id,
+            "id": self.id,
             "title": self.title,
             "description": self.description,
-            "rating": self.rating,
+            "rating": self.rating,  # optional, can update with avg
             "tutor": self.tutor_id,
             "academy": self.academy_id,
             "city": self.city,
@@ -125,17 +234,19 @@ class Course(db.Model):
             "start_time": self.start_time.isoformat() if self.start_time else None,
             "end_time": self.end_time.isoformat() if self.end_time else None,
             "price": self.price,
-            "online": self.online,  # Add the new field
-            "picture":self.picture if self.picture else None,
+            "online": self.online,
+            "picture": self.picture if self.picture else None,
         }
-        
+
         if user_flag:
             if self.academy:
                 course_dict["academy"] = self.academy.course_to_dict()
-
             if self.tutor:
                 course_dict["tutor"] = self.tutor.course_to_dict()
-            
+
+        if include_rating_stats:
+            course_dict["rating_stats"] = self.get_rating_stats_from_comments()
+
         return course_dict
     
     
@@ -182,10 +293,13 @@ class Favorites(db.Model):
     __tablename__ = 'favorites'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)    # Пользователь
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False) # Курс
-    timestamp = db.Column(db.DateTime, default=func.now())  # Время добавления в избранное
-    
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # who favorites
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # tutor/academy
+
+    timestamp = db.Column(db.DateTime, default=func.now())
+
     # Relationships
-    user = db.relationship('User', back_populates='favorites')
+    user = db.relationship('User', foreign_keys=[user_id], back_populates='favorites')
     course = db.relationship('Course', back_populates='favorites')
+    target_user = db.relationship('User', foreign_keys=[target_user_id])
