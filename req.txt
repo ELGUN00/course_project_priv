@@ -9,4 +9,5 @@ psycopg2-binary
 flask-talisman
 flask-cors
 Flask-Migrate==4.1.0
+flask-restx
 

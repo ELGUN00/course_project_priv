@@ -9,6 +9,7 @@ search_bp = Blueprint("search", __name__)
 @jwt_required()
 def get_user_profiles():
     try:
+        user_id = get_jwt_identity()
         # Extract query parameters
         query = request.args.get("query", None)
         page = int(request.args.get("page", 1))
@@ -18,6 +19,7 @@ def get_user_profiles():
 
         # Call the search service with the extracted parameters
         users = SearchService.search_users(
+            user_id = user_id,
             search_query=query,
             page=page,
             per_page=per_page,
@@ -38,6 +40,7 @@ def get_user_profiles():
 @jwt_required()
 def get_courses():
     try:
+        user_id = get_jwt_identity()
         # Extract query parameters
         query = request.args.get("query", None)
         page = int(request.args.get("page", 1))
@@ -52,6 +55,7 @@ def get_courses():
 
         # Call the search service with the extracted parameters
         courses = SearchService.search_courses(
+            user_id = user_id,
             search_query=query,
             page=page,
             per_page=per_page,

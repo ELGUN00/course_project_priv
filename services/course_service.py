@@ -1,6 +1,6 @@
 from flask_jwt_extended import get_jwt_identity
 from werkzeug.exceptions import BadRequest
-from models.user import User, Role,Course, Comment
+from models.user import User, Role,Course, Comment, Favorites
 from extensions import db, es
 from datetime import datetime
 from sqlalchemy.orm import scoped_session
@@ -265,12 +265,44 @@ class CourseService:
         return course.to_dict()
     
     @staticmethod
-    def get_top_courses(city=None, district=None, min_rating=0, online=None, page=1, per_page=10):
+    def _attach_favorites(user_id, courses):
+        """
+        Добавляет к каждому курсу поле is_favorite для текущего пользователя.
+        Выполняет один SQL-запрос для всех курсов.
+        """
+        if not user_id or not courses:
+            return [course.to_dict(is_favorite=False) for course in courses]
+
+        # Собираем все course_ids
+        course_ids = [c['id'] for c in courses]
+
+        # Получаем избранные одним запросом
+        favorite_ids = {
+            f.course_id for f in Favorites.query.filter(
+                Favorites.user_id == user_id,
+                Favorites.course_id.in_(course_ids)
+            ).all()
+        }
+
+        # Формируем итоговый список
+        return [
+        {**c, "is_favorite": c["id"] in favorite_ids}
+        for c in courses
+        ]
+    
+    @staticmethod
+    def get_top_courses(user_id = None, role=None, city=None, district=None, min_rating=0, online=None, page=1, per_page=10):
         query = Course.query.options(
             joinedload(Course.tutor), joinedload(Course.academy)
         )
 
         # Filters
+        if role == Role.TUTOR.value:
+            # показать только курсы, где преподаватель (tutor) указан
+            query = query.filter(Course.tutor_id.isnot(None))
+        elif role == Role.ACADEMY.value:
+            # показать только курсы, где академия указана
+            query = query.filter(Course.academy_id.isnot(None))
         if city:
             query = query.filter(Course.city.ilike(f"%{city}%"))
         if district:
@@ -287,8 +319,11 @@ class CourseService:
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
         # Serialize
-        courses = [course.to_dict(user_flag=True) for course in paginated.items]
+        _courses = [course.to_dict(user_flag=True) for course in paginated.items]
+        courses = (CourseService._attach_favorites(user_id=user_id,courses=_courses))
 
+         
+    # STUDENT → видит все
         return {
             "courses": courses,
             "total": paginated.total,

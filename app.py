@@ -11,7 +11,6 @@ from controllers.search_controller import search_bp
 from extensions import db, jwt, es
 from flask_talisman import Talisman
 from flask_migrate import Migrate
-
 # Initialize Flask app and configuration
 app = Flask(__name__)
 app.debug = True

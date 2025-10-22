@@ -1,10 +1,11 @@
-from models.user import User, Role
+from models.user import User, Role, Favorites
 from extensions import db, es
 import base64
 from sqlalchemy import desc
 from werkzeug.utils import secure_filename 
 from models.user import User
 import os 
+from _logger import log
 
 MEDIA_FOLDER = '/media/profiles'
 os.makedirs(MEDIA_FOLDER, exist_ok=True)
@@ -115,7 +116,33 @@ class UserService:
         return {"msg": "Profile picture deleted successfully."}
     
     @staticmethod
-    def get_top_users(role=None, location=None, degree=None, min_rating=0, page=1, per_page=10):
+    def _attach_favorites(user_id, users):
+        """
+        Добавляет к каждому курсу поле is_favorite для текущего пользователя.
+        Выполняет один SQL-запрос для всех курсов.
+        """
+        if not user_id or not users:
+            return [course.to_dict(is_favorite=False) for course in users]
+
+        # Собираем все course_ids
+        users_ids = [c['id'] for c in users]
+       
+        # Получаем избранные одним запросом
+        favorite_ids = {
+            f.target_user_id for f in Favorites.query.filter(
+                Favorites.user_id == user_id,
+                Favorites.target_user_id.in_(users_ids)
+            ).all()
+        }
+
+        # Формируем итоговый список
+        return [
+        {**c, "is_favorite": c["id"] in favorite_ids}
+        for c in users
+        ]
+    
+    @staticmethod
+    def get_top_users(user_id=None,role=None, location=None, degree=None, min_rating=0, page=1, per_page=10):
         query = User.query
 
         # Filter by role
@@ -124,6 +151,9 @@ class UserService:
             if role not in ['TUTOR', 'ACADEMY']:
                 raise ValueError("Role must be 'TUTOR' or 'ACADEMY'")
             query = query.filter(User.role == Role[role])
+        else:
+            # Default: only tutors and academies
+            query = query.filter(User.role.in_([Role.TUTOR, Role.ACADEMY]))
 
         # Optional filters
         if location:
@@ -140,8 +170,29 @@ class UserService:
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
         # Serialize
-        users = [user.course_to_dict() for user in paginated.items]
+        # _users = [user.course_to_dict() for user in paginated.items]
+        _users = []
+        for user in paginated.items:
+            user_dict = user.course_to_dict()
 
+            # Collect all course prices (from tutor and academy roles)
+            prices = []
+
+            # Courses where user is tutor
+            if user.courses_as_tutor is not None:
+                tutor_courses = user.courses_as_tutor.all()
+                prices.extend([c.price for c in tutor_courses if c.price is not None])
+
+            if user.courses_as_academy is not None:
+                academy_courses = user.courses_as_academy.all()
+                prices.extend([c.price for c in academy_courses if c.price is not None])
+
+            # Compute minimum price
+            start_price = min(prices) if prices else None
+            user_dict["start_price"] = float(start_price) if start_price is not None else None
+
+            _users.append(user_dict)
+        users = (UserService._attach_favorites(user_id=user_id,users=_users))
         return {
             "users": users,
             "total": paginated.total,

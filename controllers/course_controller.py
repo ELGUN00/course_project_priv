@@ -204,6 +204,10 @@ def get_the_course_by_id(course_id):
 @jwt_required()
 def get_top_courses_route():
     try:
+        
+        user_id = get_jwt_identity()
+
+        role = request.args.get('role')
         city = request.args.get('city')
         district = request.args.get('district')
         min_rating = float(request.args.get('min_rating', 0))
@@ -216,6 +220,8 @@ def get_top_courses_route():
         per_page = int(request.args.get('per_page', 10))
 
         result = CourseService.get_top_courses(
+            user_id=user_id,
+            role=role,
             city=city,
             district=district,
             min_rating=min_rating,

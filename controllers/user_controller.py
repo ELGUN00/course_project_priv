@@ -73,6 +73,8 @@ def get_the_user_by_id(viewed_user_id):
 @jwt_required()
 def get_top_users_route():
     try:
+        user_id = get_jwt_identity()
+
         role = request.args.get('role')
         location = request.args.get('location')
         degree = request.args.get('degree')
@@ -81,6 +83,7 @@ def get_top_users_route():
         per_page = int(request.args.get('per_page', 10))
 
         result = UserService.get_top_users(
+            user_id=user_id,
             role=role,
             location=location,
             degree=degree,

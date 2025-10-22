@@ -33,22 +33,33 @@ class FavoritesService:
 
     @staticmethod
     def get_favorites_for_user(user_id):
-        favorites = Favorites.query.filter_by(user_id=user_id).order_by(Favorites.timestamp.desc()).all()
-        favorite_data = []
+        favorites = Favorites.query.filter_by(user_id=user_id)\
+            .order_by(Favorites.timestamp.desc()).all()
+
+        favorite_data = {
+            'courses': [],
+            'tutors': [],
+            'academies': []
+        }
 
         for fav in favorites:
-            data = {
+            base_data = {
                 'id': fav.id,
                 'timestamp': fav.timestamp
             }
-            if fav.course_id:
-                data['type'] = 'course'
-                data['course'] = fav.course.to_dict()
-            elif fav.target_user_id:
-                data['type'] = fav.target_user.role.value  # "TUTOR" or "ACADEMY"
-                data['user'] = fav.target_user.to_dict()
-            favorite_data.append(data)
 
+            if fav.course_id:
+                base_data['course'] = fav.course.to_dict()
+                favorite_data['courses'].append(base_data)
+
+            elif fav.target_user_id:
+                role = fav.target_user.role.value.lower()  # 'tutor' or 'academy'
+                base_data['user'] = fav.target_user.to_dict()
+
+                if role == 'tutor':
+                    favorite_data['tutors'].append(base_data)
+                elif role == 'academy':
+                    favorite_data['academies'].append(base_data)
         return {'favorites': favorite_data}, 200
 
     @staticmethod
@@ -69,3 +80,14 @@ class FavoritesService:
         except Exception as e:
             db.session.rollback()
             return {'msg': f'Error deleting favorite: {str(e)}'}, 500
+
+    @staticmethod
+    def is_favorite(user_id, course_id=None, target_user_id=None):
+        query = Favorites.query.filter_by(user_id=user_id)
+    
+        if course_id:
+            query = query.filter_by(course_id=course_id)
+        if target_user_id:
+            query = query.filter_by(target_user_id=target_user_id)
+    
+        return db.session.query(query.exists()).scalar()
