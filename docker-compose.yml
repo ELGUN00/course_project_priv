@@ -30,7 +30,7 @@ services:
       /wait-for-it.sh elasticsearch:9200 --timeout=30 --strict -- 
       /wait-for-it.sh pgbouncer:6432 --timeout=30 --strict -- 
       echo 'All dependencies are up!' && 
-      flask db upgrade --quiet && 
+      flask db upgrade && 
       python app.py --host=0.0.0.0 --port=5002
       "
   postgres:
