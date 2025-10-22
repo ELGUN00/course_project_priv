@@ -6,7 +6,7 @@ class Config:
     # JWT token expiration time (in seconds)
     JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:12@pgbouncer:6432/test')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:12@pgbouncer:6432/test1')
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # To disable modification tracking (to save memory)
     
     # OAuth keys for Google and Apple (can be set in environment variables)
