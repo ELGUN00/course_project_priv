@@ -28,6 +28,7 @@ services:
     command: >
       /wait-for-it.sh elasticsearch:9200 -- 
       /wait-for-it.sh pgbouncer:6432 -- 
+      flask db upgrade --quiet && 
       python app.py --host=0.0.0.0 --port=5002
 
   postgres:

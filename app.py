@@ -54,8 +54,8 @@ if __name__ == '__main__':
     es.options(ignore_status=[400]).indices.create(index="users")
     es.options(ignore_status=[400]).indices.create(index="courses")
     log('Hello world!')
-    with app.app_context():
-        db.create_all()  # Create all tables
+    # with app.app_context():
+    #     db.create_all()  # Create all tables
     app.run(
         host="0.0.0.0",           # Listen on all interfaces
         port=5002,                # HTTPS default port
