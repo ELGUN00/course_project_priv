@@ -27,10 +27,10 @@ services:
     restart: always
     command: >
       sh -c "
-      /wait-for-it.sh elasticsearch:9200 --timeout=30 --strict -- 
-      /wait-for-it.sh pgbouncer:6432 --timeout=30 --strict -- 
-      echo 'All dependencies are up!' && 
-      flask db upgrade && 
+      /wait-for-it.sh postgres:5432 -t 30 &&
+      /wait-for-it.sh elasticsearch:9200 -t 30 &&
+      echo 'All dependencies are up!' &&
+      (flask db current || (flask db init && flask db migrate -m 'Initial migration' && flask db upgrade)) &&
       python app.py --host=0.0.0.0 --port=5002
       "
   postgres:
